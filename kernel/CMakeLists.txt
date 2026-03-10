@@ -101,7 +101,6 @@ kernel_sources_ifdef(CONFIG_MULTITHREADING
   msg_q.c
   mutex.c
   queue.c
-  sem.c
   stack.c
   system_work_q.c
   work.c
@@ -110,6 +109,11 @@ kernel_sources_ifdef(CONFIG_MULTITHREADING
   sched.c
   pipe.c
   )
+
+# sem.c is replaced by the Gale module when CONFIG_GALE_KERNEL_SEM=y
+if(CONFIG_MULTITHREADING AND NOT CONFIG_GALE_KERNEL_SEM)
+  kernel_sources(sem.c)
+endif()
 
 if(CONFIG_MULTITHREADING)
 if(CONFIG_SCHED_SCALABLE OR CONFIG_WAITQ_SCALABLE)
