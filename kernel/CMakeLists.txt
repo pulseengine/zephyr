@@ -99,7 +99,6 @@ kernel_sources_ifdef(CONFIG_MULTITHREADING
   idle.c
   mailbox.c
   msg_q.c
-  mutex.c
   queue.c
   stack.c
   system_work_q.c
@@ -109,6 +108,11 @@ kernel_sources_ifdef(CONFIG_MULTITHREADING
   sched.c
   pipe.c
   )
+
+# mutex.c is replaced by the Gale module when CONFIG_GALE_KERNEL_MUTEX=y
+if(CONFIG_MULTITHREADING AND NOT CONFIG_GALE_KERNEL_MUTEX)
+  kernel_sources(mutex.c)
+endif()
 
 # sem.c is replaced by the Gale module when CONFIG_GALE_KERNEL_SEM=y
 if(CONFIG_MULTITHREADING AND NOT CONFIG_GALE_KERNEL_SEM)
