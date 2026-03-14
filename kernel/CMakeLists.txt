@@ -98,16 +98,28 @@ kernel_sources_ifdef(CONFIG_SCHED_CPU_MASK
 kernel_sources_ifdef(CONFIG_MULTITHREADING
   idle.c
   mailbox.c
-  msg_q.c
   queue.c
-  stack.c
   system_work_q.c
   work.c
   condvar.c
   thread.c
   sched.c
-  pipe.c
   )
+
+# pipe.c is replaced by the Gale module when CONFIG_GALE_KERNEL_PIPE=y
+if(CONFIG_MULTITHREADING AND NOT CONFIG_GALE_KERNEL_PIPE)
+  kernel_sources(pipe.c)
+endif()
+
+# stack.c is replaced by the Gale module when CONFIG_GALE_KERNEL_STACK=y
+if(CONFIG_MULTITHREADING AND NOT CONFIG_GALE_KERNEL_STACK)
+  kernel_sources(stack.c)
+endif()
+
+# msg_q.c is replaced by the Gale module when CONFIG_GALE_KERNEL_MSGQ=y
+if(CONFIG_MULTITHREADING AND NOT CONFIG_GALE_KERNEL_MSGQ)
+  kernel_sources(msg_q.c)
+endif()
 
 # mutex.c is replaced by the Gale module when CONFIG_GALE_KERNEL_MUTEX=y
 if(CONFIG_MULTITHREADING AND NOT CONFIG_GALE_KERNEL_MUTEX)
