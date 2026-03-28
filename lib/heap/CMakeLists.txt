@@ -5,9 +5,10 @@ zephyr_constants_library(
   SOURCE ${CMAKE_CURRENT_SOURCE_DIR}/heap_constants.c
 )
 
-zephyr_sources(
-  heap.c
-  )
+# heap.c is replaced by the Gale module when CONFIG_GALE_KERNEL_HEAP=y
+if(NOT CONFIG_GALE_KERNEL_HEAP)
+  zephyr_sources(heap.c)
+endif()
 
 zephyr_sources_ifdef(CONFIG_SYS_HEAP_RUNTIME_STATS heap_stats.c)
 zephyr_sources_ifdef(CONFIG_SYS_HEAP_INFO heap_info.c)
