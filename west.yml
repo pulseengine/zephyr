@@ -21,6 +21,8 @@ manifest:
   remotes:
     - name: upstream
       url-base: https://github.com/zephyrproject-rtos
+    - name: pulseengine
+      url-base: https://github.com/pulseengine
     - name: babblesim
       url-base: https://github.com/BabbleSim
 
@@ -375,8 +377,9 @@ manifest:
       groups:
         - debug
     - name: picolibc
+      remote: pulseengine
       path: modules/lib/picolibc
-      revision: 01254932e8e81085817ed61fd858648584ffe37c
+      revision: gale/lld-lto-fix
     - name: psa-arch-tests
       revision: 6e8219237435112df33bbcf37b7f5657fcfb9cff
       path: modules/tee/tf-m/psa-arch-tests
