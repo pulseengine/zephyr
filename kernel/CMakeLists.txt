@@ -64,10 +64,7 @@ kernel_sources(
   busy_wait.c
   device.c
   errno.c
-  fatal.c
   init.c
-  kheap.c
-  mem_slab.c
   float.c
   version.c
   )
@@ -91,20 +88,53 @@ if(CONFIG_CPU_CORTEX_M)
   endif()
 endif()
 
-kernel_sources_ifdef(CONFIG_SCHED_CPU_MASK
-  cpu_mask.c
-  )
+# fatal.c is replaced by the Gale module when CONFIG_GALE_KERNEL_FATAL=y
+if(NOT CONFIG_GALE_KERNEL_FATAL)
+  kernel_sources(fatal.c)
+endif()
+
+# kheap.c is replaced by the Gale module when CONFIG_GALE_KERNEL_KHEAP=y
+if(NOT CONFIG_GALE_KERNEL_KHEAP)
+  kernel_sources(kheap.c)
+endif()
+
+if(CONFIG_SCHED_CPU_MASK AND NOT CONFIG_GALE_KERNEL_CPU_MASK)
+  kernel_sources(cpu_mask.c)
+endif()
 
 kernel_sources_ifdef(CONFIG_MULTITHREADING
   idle.c
-  mailbox.c
-  queue.c
   system_work_q.c
-  work.c
-  condvar.c
-  thread.c
-  sched.c
   )
+
+# work.c: Gale provides decision helpers only (2 of 25+ functions).
+# Keep work.c always compiled to avoid missing k_work_* link errors.
+kernel_sources_ifdef(CONFIG_MULTITHREADING work.c)
+
+# condvar.c: Gale verifies condvar by composition (no C shim replacement).
+# Keep the original always compiled.
+kernel_sources_ifdef(CONFIG_MULTITHREADING condvar.c)
+
+# thread.c is replaced by the Gale module when CONFIG_GALE_KERNEL_THREAD_LIFECYCLE=y
+if(CONFIG_MULTITHREADING AND NOT CONFIG_GALE_KERNEL_THREAD_LIFECYCLE)
+  kernel_sources(thread.c)
+endif()
+
+# sched.c is replaced by the Gale module when CONFIG_GALE_KERNEL_SCHED=y
+if(CONFIG_MULTITHREADING AND NOT CONFIG_GALE_KERNEL_SCHED)
+  kernel_sources(sched.c)
+endif()
+
+# mailbox.c is replaced by the Gale module when CONFIG_GALE_KERNEL_MBOX=y
+if(CONFIG_MULTITHREADING AND NOT CONFIG_GALE_KERNEL_MBOX)
+  kernel_sources(mailbox.c)
+endif()
+
+# queue.c is replaced by the Gale module when CONFIG_GALE_KERNEL_QUEUE=y
+if(CONFIG_MULTITHREADING AND NOT CONFIG_GALE_KERNEL_QUEUE)
+  kernel_sources(queue.c)
+endif()
+
 
 # pipe.c is replaced by the Gale module when CONFIG_GALE_KERNEL_PIPE=y
 if(CONFIG_MULTITHREADING AND NOT CONFIG_GALE_KERNEL_PIPE)
@@ -131,20 +161,42 @@ if(CONFIG_MULTITHREADING AND NOT CONFIG_GALE_KERNEL_SEM)
   kernel_sources(sem.c)
 endif()
 
+# mem_slab.c is replaced by the Gale module when CONFIG_GALE_KERNEL_MEM_SLAB=y
+if(NOT CONFIG_GALE_KERNEL_MEM_SLAB)
+  kernel_sources(mem_slab.c)
+endif()
+
+
 if(CONFIG_MULTITHREADING)
 if(CONFIG_SCHED_SCALABLE OR CONFIG_WAITQ_SCALABLE)
 kernel_sources(priority_queues.c)
 endif()
 
-kernel_sources_ifdef(CONFIG_SMP
-     smp.c
-     ipi.c)
+# smp.c: gale_smp_state adds verified CPU-count decision helpers alongside
+# the original.  It does NOT replace the full smp.c API (z_smp_global_lock,
+# z_smp_init, z_smp_current_get, etc.), so smp.c must always be compiled
+# when CONFIG_SMP is active.
+if(CONFIG_SMP)
+  kernel_sources(smp.c)
+endif()
+# ipi.c: gale_ipi adds a verified ipi_mask_create helper (gale_ipi_mask_create)
+# alongside the original.  It does NOT replace flag_ipi, signal_pending_ipi,
+# ipi_mask_create, or z_sched_ipi, so ipi.c must always be compiled when
+# CONFIG_SMP is active.
+if(CONFIG_SMP)
+  kernel_sources(ipi.c)
+endif()
 else() # CONFIG_MULTITHREADING
 kernel_sources(nothread.c)
 endif() # CONFIG_MULTITHREADING
 
-kernel_sources_ifdef(CONFIG_TIMESLICING timeslicing.c)
-kernel_sources_ifdef(CONFIG_SPIN_VALIDATE spinlock_validate.c)
+# timeslicing.c is replaced by the Gale module when CONFIG_GALE_KERNEL_TIMESLICE=y
+if(CONFIG_TIMESLICING AND NOT CONFIG_GALE_KERNEL_TIMESLICE)
+  kernel_sources(timeslicing.c)
+endif()
+if(CONFIG_SPIN_VALIDATE AND NOT CONFIG_GALE_KERNEL_SPINLOCK_VALIDATE)
+  kernel_sources(spinlock_validate.c)
+endif()
 kernel_sources_ifdef(CONFIG_IRQ_OFFLOAD irq_offload.c)
 kernel_sources_ifdef(CONFIG_BOOTARGS boot_args.c)
 kernel_sources_ifdef(CONFIG_THREAD_MONITOR thread_monitor.c)
@@ -163,18 +215,28 @@ set_target_properties(
   )
 
 target_sources_ifdef(CONFIG_REQUIRES_STACK_CANARIES   kernel PRIVATE compiler_stack_protect.c)
-target_sources_ifdef(CONFIG_SYS_CLOCK_EXISTS      kernel PRIVATE timeout.c timer.c)
+# timeout.c and timer.c: Gale provides decision helpers but does NOT
+# replace these files — they define sys_clock_announce, z_abort_timeout,
+# and other functions that the kernel depends on.
+target_sources_ifdef(CONFIG_SYS_CLOCK_EXISTS kernel PRIVATE timeout.c timer.c)
 if(CONFIG_TIMER_READS_ITS_FREQUENCY_AT_RUNTIME OR CONFIG_SYSTEM_CLOCK_HW_CYCLES_PER_SEC_RUNTIME_UPDATE)
   target_sources(kernel PRIVATE sys_clock_hw_cycles.c)
 endif()
 target_sources_ifdef(CONFIG_ATOMIC_OPERATIONS_C   kernel PRIVATE atomic_c.c)
 target_sources_ifdef(CONFIG_MMU                   kernel PRIVATE mmu.c)
-target_sources_ifdef(CONFIG_POLL                  kernel PRIVATE poll.c)
-target_sources_ifdef(CONFIG_EVENTS                kernel PRIVATE events.c)
+# poll.c is replaced by the Gale module when CONFIG_GALE_KERNEL_POLL=y
+if(CONFIG_POLL AND NOT CONFIG_GALE_KERNEL_POLL)
+  target_sources(kernel PRIVATE poll.c)
+endif()
+# events.c is replaced by the Gale module when CONFIG_GALE_KERNEL_EVENT=y
+if(CONFIG_EVENTS AND NOT CONFIG_GALE_KERNEL_EVENT)
+  target_sources(kernel PRIVATE events.c)
+endif()
 target_sources_ifdef(CONFIG_SCHED_THREAD_USAGE    kernel PRIVATE usage.c)
 target_sources_ifdef(CONFIG_OBJ_CORE              kernel PRIVATE obj_core.c)
 
-if(${CONFIG_KERNEL_MEM_POOL})
+# mempool.c is replaced by the Gale module when CONFIG_GALE_KERNEL_MEMPOOL=y
+if(CONFIG_KERNEL_MEM_POOL AND NOT CONFIG_GALE_KERNEL_MEMPOOL)
   target_sources(kernel PRIVATE mempool.c)
 
   if(CONFIG_HEAP_MEM_POOL_IGNORE_MIN)
@@ -213,18 +275,25 @@ endif()
 # userspace_handler.c and userspace.c. If not the linker would complain.
 # This order has to be maintained. Any new file should be placed
 # above these 2 files.
-target_sources_ifdef(
-  CONFIG_USERSPACE
-  kernel PRIVATE
-  futex.c
-  mem_domain.c
-  userspace_handler.c
-  userspace.c
-  )
+# futex.c is replaced by the Gale module when CONFIG_GALE_KERNEL_FUTEX=y
+if(CONFIG_USERSPACE AND NOT CONFIG_GALE_KERNEL_FUTEX)
+  target_sources(kernel PRIVATE futex.c)
+endif()
+# mem_domain.c is replaced by the Gale module when CONFIG_GALE_KERNEL_MEM_DOMAIN=y
+if(CONFIG_USERSPACE AND NOT CONFIG_GALE_KERNEL_MEM_DOMAIN)
+  target_sources(kernel PRIVATE mem_domain.c)
+endif()
+# userspace_handler.c is always needed (syscall marshaling)
+target_sources_ifdef(CONFIG_USERSPACE kernel PRIVATE userspace_handler.c)
+# userspace.c is replaced by the Gale module when CONFIG_GALE_KERNEL_USERSPACE=y
+if(CONFIG_USERSPACE AND NOT CONFIG_GALE_KERNEL_USERSPACE)
+  target_sources(kernel PRIVATE userspace.c)
+endif()
 
-if(${CONFIG_DYNAMIC_THREAD})
+# dynamic.c is replaced by the Gale module when CONFIG_GALE_KERNEL_DYNAMIC=y
+if(CONFIG_DYNAMIC_THREAD AND NOT CONFIG_GALE_KERNEL_DYNAMIC)
   target_sources(kernel PRIVATE dynamic.c)
-else()
+elseif(NOT CONFIG_DYNAMIC_THREAD)
   target_sources(kernel PRIVATE dynamic_disabled.c)
 endif()
 
