@@ -235,9 +235,17 @@ endif()
 target_sources_ifdef(CONFIG_SCHED_THREAD_USAGE    kernel PRIVATE usage.c)
 target_sources_ifdef(CONFIG_OBJ_CORE              kernel PRIVATE obj_core.c)
 
-# mempool.c is replaced by the Gale module when CONFIG_GALE_KERNEL_MEMPOOL=y
-if(CONFIG_KERNEL_MEM_POOL AND NOT CONFIG_GALE_KERNEL_MEMPOOL)
-  target_sources(kernel PRIVATE mempool.c)
+# mempool.c is replaced by the Gale module when CONFIG_GALE_KERNEL_MEMPOOL=y — but ONLY
+# the source file. The heap-size computation below defines K_HEAP_MEM_POOL_SIZE for the
+# WHOLE build (kernel.h declares k_malloc under it, and the replacement gale_mempool.c
+# compiles k_malloc under it). Skipping the whole block when Gale replaced mempool.c left
+# K_HEAP_MEM_POOL_SIZE undefined, so every CONFIG_KERNEL_MEM_POOL build with Gale failed
+# to link "undefined reference to k_malloc" (gale#401: benchmark.kernel.core,
+# benchmark.kernel.latency*, and others).
+if(CONFIG_KERNEL_MEM_POOL)
+  if(NOT CONFIG_GALE_KERNEL_MEMPOOL)
+    target_sources(kernel PRIVATE mempool.c)
+  endif()
 
   if(CONFIG_HEAP_MEM_POOL_IGNORE_MIN)
     set(final_heap_size ${CONFIG_HEAP_MEM_POOL_SIZE})
